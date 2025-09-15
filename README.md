@@ -25,10 +25,10 @@ Connect the Conversation Designer’s responses to the code.
 
 3. Feature Developer
 Add at least 2 extra features, such as:
-Tell the time (datetime)
-Do simple math (2+2, 10*5)
-Tell a joke
-Remember the user’s name
+- Tell the time (datetime)
+- Do simple math (2+2, 10*5)
+- Tell a joke
+- Remember the user’s name
 
 📅 Timeline (1 Week)
 Day 1: Assign roles, brainstorm chatbot topics.
