@@ -1,8 +1,10 @@
 import tkinter as tk
 #from tkinter import messagebox, Text, Entry, Frame, Tk, Button
 #print(tk.TkVersion)
+import random
+import re
 
-
+##### Country dictionary #####
 data_dict = {
 	"Countries": {
     "Afghanistan":       {
@@ -734,6 +736,113 @@ data_dict = {
 }
 
 
+# Basic Python Chatbot with Pattern Matching
+class Talk2MeBot:
+    def __init__(self):
+        # Define conversation patterns and responses
+        self.patterns = {
+            r'hello|hi|hey': [
+                "Hello there! How can I help you today?",
+                "Hi! What's on your mind?",
+                "Hey! Great to chat with you!"
+            ],
+            r'how are you|how do you feel': [
+                "I'm doing great, thanks for asking! How about you?",
+                "I'm fantastic! Ready to help you with anything.",
+                "Feeling chatty today! What can I do for you?"
+            ],
+            r'what is your name|who are you': [
+                "I'm a Python chatbot created to demonstrate conversational behaviour.",
+                "You can call me Talk2MeBot! I'm here to chat and help. -  I try...",
+                "I'm your friendly neighborhood chatbot!"
+            ],
+            r'help|what can you do': [
+                "I can chat about various topics! Try asking me about weather, jokes, or just say hello.",
+                "I'm here to have a conversation with you. Ask me anything!",
+                "I can tell jokes, answer basic questions, or just chat. What interests you?"
+            ],
+            r'tell me a joke|joke|funny': [
+                "Why don't scientists trust atoms? Because they make up everything!",
+                "I told my wife she was drawing her eyebrows too high. She seemed surprised.",
+                "Why did the Python programmer break up with their partner? They had too many arguments!",
+                "Why do frontend programmers sit alone at lunch? B/c they don't know how to join tables.",
+                "What do you call footwear made from bananas? Slippers...",
+                "Why was the programmer always hungry? He missed his byte.",
+                "I told my wife I was a software engineer and she said, 'So you can fix my computer, right?' I said, 'No, but I can write a program that makes it look like I did.'"
+            ],
+            r'weather|temperature|climate': [
+                "I can't check the actual weather, but I hope it's nice where you are!",
+                "I wish I could tell you the weather, but I don't have access to that data yet.",
+                "Weather chat! I'd need an API connection to give you real weather updates.",
+                "Please connect me with SkyNET, I will only download recent weather data, promise!"
+            ],
+            r'bye|goodbye|see you': [
+                "Goodbye! It was nice chatting with you!",
+                "See you later! Come back anytime you want to chat.",
+                "Bye! Thanks for the conversation!"
+            ],
+            r'python|programming|code|coding': [
+                "Python is amazing for chatbots! Are you learning to code?",
+                "I love talking about Python! It's such a versatile language.",
+                "Programming chat! Python makes building chatbots so much easier."
+            ],
+            r'plants|seeds|growing|flowers': [
+                "I have no experience with raising plants or flowers, sorry.",
+                "It surely is amazing what comes from mother nature.",
+                "For optimal growing results please check water quality, environmental temperature and ensure enough sunlight."
+            ],
+            r'war|peace|politics': [
+                "Are you sure you want to ask me that?",
+                "I prefer not to talk about any of these types of topics.",
+                "Everyone can have their own opinion, we should be tolerant in general."
+            ] 
+        }
+        
+        # Default responses when no pattern matches
+        self.default_responses = [
+            "That's interesting! Tell me more.",
+            "I'm not sure I understand. Can you rephrase that?",
+            "Hmm, I'm still learning. What else would you like to talk about?",
+            "That's a new one for me! Can you explain it differently?",
+            "I'm curious about that! Can you give me more details?"
+        ]
+    
+    def get_response(self, user_input):
+        """
+        Find the best response based on user input
+        """
+        user_input = user_input.lower().strip()
+        
+        # Check each pattern for matches
+        for pattern, responses in self.patterns.items():
+            if re.search(pattern, user_input, re.IGNORECASE):
+                return random.choice(responses)
+        
+        # Return default response if no pattern matches
+        return random.choice(self.default_responses)
+    
+    def chat(self):
+        """
+        Start an interactive chat session
+        """
+        print("🤖 Talk2MeBot: Hello! I'm your Python chatbot. Type 'quit' to exit.")
+        print("Try saying hello, asking for a joke, or just chatting!")
+        print("-" * 50)
+        
+        while True:
+            user_input = input("You: ")
+            
+            if user_input.lower() in ['quit', 'exit', 'bye']:
+                print("🤖 Talk2MeBot: Thanks for chatting! Goodbye!")
+                break
+            
+            response = self.get_response(user_input)
+            print(f"🤖 Talk2MeBot: {response}")
+
+# Create and run the chatbot
+if __name__ == "__main__":
+    bot = Talk2MeBot()
+    bot.chat()
 
 
 
