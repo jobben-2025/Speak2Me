@@ -50,7 +50,7 @@ class Talk2MeBot:
                     year = date_and_time("%Y"),
                     time = date_and_time("%H:%M:%S"),
                     user = self.current_user,
-                    nick = self.set_nickname(re_result, user_input) #UNDERGOING DEVELOPMENT...
+                    nick = self.set_nickname(re_result, user_input) #UNDERGOING DEVELOPMENT..
                     
                     )
         

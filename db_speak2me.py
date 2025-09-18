@@ -734,7 +734,7 @@ data = {
     },
 
     k_patterns:{
-            r':|call me|set nickname|my name is|I am':["test{nick}"], #TESTING GROUND
+            r':|call me|set nickname|my name is|I am':["test{nick}"], #TESTING GROUND...
 
             r'date and time|date & time|time and date| time & date': [
                 "Today is: {date} and it's {time} o'clock"
