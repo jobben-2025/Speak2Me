@@ -3,25 +3,21 @@ from __future__ import annotations  # must be the first non-docstring statement
 # chatbot.py
 # CoreCode integrated: Dispatcher + Conversation Map + Country QA + Fuzzy typo matching
 #
-# - Beinhaltet weiterhin Talk2MeBot (API kompatibel für Team)
+# - Beinhaltet weiterhin Talk2MeBot (API-kompatibel fürs Team)
 # - Nutzt db_speak2me.py (patterns, defaults, countries)
 # - REPL: exit/quit/bye oder 'x' (mit y/n Bestätigung)
-# - Core-only: keine neuen Extra-Features im Core (Zeit/Math bleiben unten im Feature-Bereich)
+# - Feature-Teil: Zeit + Simple-Math (Rud) nahezu unverändert, nur minimal repariert
 
 # --- Original Importblock (beibehalten) ---
-import tkinter as tk
-# from tkinter import messagebox, Text, Entry, Frame, Tk, Button
-# print(tk.TkVersion)
+import tkinter as tk  # GUI-Platzhalter, aktuell nicht genutzt
 import random
 import re
 from datetime import datetime
-from collections import defaultdict
-import db_speak2me as db
-
-# --- Zusätzliche Core-Imports ---
+from typing import Dict, Any, Optional, Tuple
 import string
 import difflib
-from typing import Dict, Any, Optional, Tuple
+
+import db_speak2me as db
 
 
 # ============================================================
@@ -71,10 +67,12 @@ def match_country(text: str, countries: Dict[str, Dict[str, str]]) -> Optional[T
     Find a matching country using either country name or capital contained in the normalized text.
     Returns (country_name, info_dict) or None.
     """
+    t = normalize(text)
     for cname, info in countries.items():
-        if cname.lower() in text:
+        if normalize(cname) in t:
             return cname, info
-        if info.get("capital", "").lower() in text:
+        cap = info.get("capital", "")
+        if cap and normalize(cap) in t:
             return cname, info
     return None
 
@@ -84,9 +82,7 @@ def match_country(text: str, countries: Dict[str, Dict[str, str]]) -> Optional[T
 # ============================================================
 
 def word_in_text_with_typos(word: str, text: str, cutoff: float = 0.8) -> bool:
-    """
-    True if a token in text is close enough to target 'word' (handles typos like 'langiuage').
-    """
+    """True if a token in text is close enough to target 'word' (handles typos like 'langiuage')."""
     for token in text.split():
         if difflib.get_close_matches(token, [word], n=1, cutoff=cutoff):
             return True
@@ -117,7 +113,7 @@ def country_specific_answer(text: str, countries: Dict[str, Dict[str, str]]) -> 
 
 
 # ============================================================
-# 2c) Inverse questions (capital → country) and (currency → countries)
+# 2c) Inverse questions (capital → country) and (currency → countries) (Core)
 # ============================================================
 
 def country_from_capital_question(text: str, countries: Dict[str, Dict[str, str]]) -> Optional[str]:
@@ -125,13 +121,13 @@ def country_from_capital_question(text: str, countries: Dict[str, Dict[str, str]
     Handle questions like: 'Paris is the capital of which country?'
     Returns: 'Paris is the capital of France.'
     """
-    # ensure the intent is really an inverse-capital question
     if "which country" not in text and "what country" not in text:
         return None
 
+    t = normalize(text)
     for cname, info in countries.items():
-        cap = info.get("capital", "").lower()
-        if cap and cap in text:
+        cap = info.get("capital", "")
+        if cap and normalize(cap) in t:
             return f"{info['capital']} is the capital of {cname}."
     return None
 
@@ -140,17 +136,17 @@ def countries_with_currency_question(text: str, countries: Dict[str, Dict[str, s
     Handle questions like: 'In which countries is the currency Euro?'
     Returns: 'The Euro is used in: Germany, France, Italy, Spain.'
     """
-    # intent cues: "which countries" / "in which" and the word "currency"
     if ("which countries" not in text and "in which" not in text) or ("currency" not in text):
         return None
 
+    t = normalize(text)
     # try to detect a currency mention in the text and list all countries using it
     for _, info in countries.items():
-        curr = info.get("currency", "").lower()
+        curr = info.get("currency", "")
         if not curr:
             continue
-        if curr in text:
-            matches = [c for c, i in countries.items() if i.get("currency", "").lower() == curr]
+        if normalize(curr) in t:
+            matches = [c for c, i in countries.items() if normalize(i.get("currency", "")) == normalize(curr)]
             proper = info.get("currency", "This currency")
             return f"The {proper} is used in: {', '.join(matches)}."
     return None
@@ -169,15 +165,26 @@ def dispatch(user_text: str, current_user: str = "user") -> Tuple[str, Dict[str,
       2c) Inverse currency → list of countries
       3) Country fallback (all known facts)
       4) Default fallback
-    Returns (reply_text, metadata) so Feature Dev can extend later.
+    Returns (reply_text, metadata).
     """
     text_norm = normalize(user_text)
+    text_raw = user_text.strip().lower()
 
     # 1) Designer patterns
     patterns: Dict[str, Any] = db.data[db.k_patterns]
     for pattern, responses in patterns.items():
-        if re.search(pattern, text_norm, re.IGNORECASE):
+        if re.search(pattern, text_norm, re.IGNORECASE) or re.search(pattern, text_raw, re.IGNORECASE):
+            # fill placeholders for pattern replies (Rud's features wired in)
             fmt = _SafeMap(user=current_user)
+            # Zeit
+            fmt["date"]  = date_and_time("%a %d %b %Y")
+            fmt["day"]   = date_and_time("%A")
+            fmt["month"] = date_and_time("%B")
+            fmt["year"]  = date_and_time("%Y")
+            fmt["time"]  = date_and_time("%H:%M")
+            # Simple Math
+            fmt["x"] = execute_expression(user_text)
+
             reply = random.choice(responses).format_map(fmt)
             return reply, {"type": "pattern", "pattern": pattern}
 
@@ -189,9 +196,28 @@ def dispatch(user_text: str, current_user: str = "user") -> Tuple[str, Dict[str,
         return specific, {"type": "country-specific"}
 
     # 2b) Inverse capital → country
-    inverse_cap = country_from_capital_question(text_norm, countries)
-    if inverse_cap:
-        return inverse_cap, {"type": "inverse-capital"}
+   def country_from_capital_question(text: str, countries: Dict[str, Dict[str, str]]) -> Optional[str]:
+    """
+    Robust inverse: handles variants like
+      - "In which country is Paris?"
+      - "Paris is in what country?"
+      - "What country is Paris in"
+    """
+    # Intent: must mention both 'country' and either 'which' or 'what' (order doesn't matter)
+    t_raw = text
+    t = normalize(text)
+    has_country = "country" in t
+    has_which_or_what = ("which" in t) or ("what" in t)
+    if not (has_country and has_which_or_what):
+        return None
+
+    # Find any capital mentioned and return its country
+    for cname, info in countries.items():
+        cap = info.get("capital", "")
+        if cap and normalize(cap) in t:
+            return f"{info['capital']} is the capital of {cname}."
+    return None
+
 
     # 2c) Inverse currency → list of countries
     inverse_cur = countries_with_currency_question(text_norm, countries)
@@ -218,7 +244,7 @@ def dispatch(user_text: str, current_user: str = "user") -> Tuple[str, Dict[str,
 class Talk2MeBot:
     """
     Thin wrapper class to keep the previous public API stable.
-    Internally it delegates to the new Core dispatcher.
+    Internally it delegates to the Core dispatcher.
     """
     def __init__(self, user: str = "username"):
         self.current_user = user
@@ -228,96 +254,89 @@ class Talk2MeBot:
         return reply
 
     def chat(self):
-        """
-        REPL with exit handling and confirmation on 'x' to close.
-        """
+        """Simple CLI REPL."""
         print("🤖 Welcome to Speak2Me!")
-        print("Ask me about countries you are interested in or type 'help' if you need suggestions for questions.")
-        print("If you are done just type 'exit' or simply 'x' to close this program.")
+        print("Ask me about countries or try: date, time, calculate 2+2")
+        print("Type 'exit' or 'x' to quit.")
         print("-" * 60)
-
         while True:
             try:
-                user_input = input("You: ")
+                u = input("You: ").strip()
             except (EOFError, KeyboardInterrupt):
                 print("\nBot: Bye.")
                 break
-
-            u = user_input.strip().lower()
-            if u in ["quit", "exit", "bye", "/exit"]:
-                print("🤖 Talk2MeBot: Thanks for chatting! Goodbye!")
+            low = u.lower()
+            if low in ["quit", "exit", "bye", "/exit"]:
+                print("Bot: Bye.")
                 break
-            if u == "x":
+            if low == "x":
                 confirm = input("Bot: Do you want to exit? (y/n): ").strip().lower()
                 if confirm == "y":
-                    print("🤖 Talk2MeBot: Thanks for chatting! Goodbye!")
+                    print("Bot: Bye.")
                     break
                 else:
                     continue
-
-            response = self.get_response(user_input)
-            print(f"🤖 Talk2MeBot: {response}")
+            print(f"🤖 {self.get_response(u)}")
 
 
 # ============================================================
-# 5) FEATURE DEVELOPER (unverändert beibehalten)
+# 5) FEATURE DEVELOPER (Rud) - nahezu unverändert
 # ============================================================
-
-# 3. FEATURE DEVELOPER
-# Add at least 2 extra features, such as:
 
 # Tell the time (datetime)
-def date_and_time(format="%a %d %b %Y, %H:%M"):
+def date_and_time(format: str = "%a %d %b %Y, %H:%M") -> str:
     now = datetime.now()
-    # print(now.strftime("%a %d %b %Y, %H:%M"))
-    # print(now.strftime("%H:%M"))
     return now.strftime(format)
 
 # Do simple math (2+2, 10*5)
-def execute_expression(user_input):
+def execute_expression(user_input: str) -> str:
     ex_calc = []
-    print(":::::::::::::::::::::::::::::::::")
+    # print(":::::::::::::::::::::::::::::::::")  # Debug optional
     for ex in extract_expression(user_input):
         ex_calc.append(f"{ex} = {math(ex)}")
-    return "\n" + "\n".join(ex_calc)
+    return ("\n" + "\n".join(ex_calc)) if ex_calc else ""
 
-def math(expression):  # need to extract expression in user input
-    r = None
+def math(expression: str):
+    # Hinweis: eval bleibt wie im Original. Sicherheit kommt durch extract_expression.
     try:
-        r = eval(expression)
-    except:
-        r = f"Could not evaluate: {expression}"
-    return r
+        return eval(expression)
+    except Exception:
+        return f"Could not evaluate: {expression}"
 
-def extract_expression(user_input):
+def extract_expression(user_input: str):
+    """
+    Rud: scan user_input and extract arithmetic expressions.
+    Minimal fix:
+      - allow '.' inside numbers
+      - correct end-index for slicing (Python slice end is exclusive)
+    """
     valid_start = {"(", "-", "+", "."}
-    valids = {"-", "+", "/", "*", "%", " ", "(", ")"}
+    valids = {"-", "+", "/", "*", "%", " ", "(", ")", "."}
     index_start, index_end = None, None
     expressions = []
 
     for i, c in enumerate(user_input):
-
         # collect start_index
         if index_start is None:
-            if (c in valid_start or c.isdigit()):
+            if (c in valid_start) or c.isdigit():
                 index_start = i
+                continue
 
         # collect end_index
         if index_start is not None and index_end is None:
-            if (c not in valids and not c.isdigit()):
-                index_end = i - 1
-            if (i == len(user_input) - 1) and (c.isdigit() or c in valids):
-                index_end = i + 1
+            if (not c.isdigit()) and (c not in valids):
+                index_end = i  # end is exclusive
+            elif i == len(user_input) - 1 and (c.isdigit() or c in valids):
+                index_end = i + 1  # include last char
 
         # reset indices for next expression
         if index_start is not None and index_end is not None:
-            expressions.append(user_input[index_start:index_end])
+            chunk = user_input[index_start:index_end].strip()
+            if chunk:
+                expressions.append(chunk)
             index_start, index_end = None, None
 
     return expressions
-
-# Remember the user’s name
-# (Feature placeholder - to be implemented by Feature Dev)
 
 
 # ============================================================
