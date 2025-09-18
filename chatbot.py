@@ -1,6 +1,7 @@
 from __future__ import annotations  # must be the first non-docstring statement
 
 # chatbot.py
+#update
 # CoreCode integrated: Dispatcher + Conversation Map + Country QA + Fuzzy typo matching
 #
 # - Beinhaltet weiterhin Talk2MeBot (API-kompatibel fürs Team)
@@ -346,3 +347,4 @@ def extract_expression(user_input: str):
 if __name__ == "__main__":
     bot = Talk2MeBot()
     bot.chat()
+#update
