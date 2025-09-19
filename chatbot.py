@@ -1,7 +1,6 @@
 from __future__ import annotations  # must be the first non-docstring statement
 
 # chatbot.py
-#update
 # CoreCode integrated: Dispatcher + Conversation Map + Country QA + Fuzzy typo matching
 #
 # - Beinhaltet weiterhin Talk2MeBot (API-kompatibel fürs Team)
@@ -114,18 +113,23 @@ def country_specific_answer(text: str, countries: Dict[str, Dict[str, str]]) -> 
 
 
 # ============================================================
-# 2c) Inverse questions (capital → country) and (currency → countries) (Core)
+# 2c) Inverse questions (capital -> country) and (currency -> countries) (Core)
 # ============================================================
 
 def country_from_capital_question(text: str, countries: Dict[str, Dict[str, str]]) -> Optional[str]:
     """
-    Handle questions like: 'Paris is the capital of which country?'
-    Returns: 'Paris is the capital of France.'
+    Robust inverse: handles variants like
+      - "In which country is Paris?"
+      - "Paris is in what country?"
+      - "What country is Paris in"
+      - "which country paris"
     """
-    if "which country" not in text and "what country" not in text:
+    t = normalize(text)
+    has_country = "country" in t
+    has_which_or_what = ("which" in t) or ("what" in t)
+    if not (has_country and has_which_or_what):
         return None
 
-    t = normalize(text)
     for cname, info in countries.items():
         cap = info.get("capital", "")
         if cap and normalize(cap) in t:
@@ -137,7 +141,7 @@ def countries_with_currency_question(text: str, countries: Dict[str, Dict[str, s
     Handle questions like: 'In which countries is the currency Euro?'
     Returns: 'The Euro is used in: Germany, France, Italy, Spain.'
     """
-    if ("which countries" not in text and "in which" not in text) or ("currency" not in text):
+    if ("which countries" not in text.lower() and "in which" not in text.lower()) or ("currency" not in text.lower()):
         return None
 
     t = normalize(text)
@@ -162,8 +166,8 @@ def dispatch(user_text: str, current_user: str = "user") -> Tuple[str, Dict[str,
     Main router:
       1) Pattern map from db (Conversation Designer wins if present)
       2) Country-specific focused answers (capital/currency/language)
-      2b) Inverse capital → country
-      2c) Inverse currency → list of countries
+      2b) Inverse capital -> country
+      2c) Inverse currency -> list of countries
       3) Country fallback (all known facts)
       4) Default fallback
     Returns (reply_text, metadata).
@@ -196,31 +200,12 @@ def dispatch(user_text: str, current_user: str = "user") -> Tuple[str, Dict[str,
     if specific:
         return specific, {"type": "country-specific"}
 
-    # 2b) Inverse capital → country
-   def country_from_capital_question(text: str, countries: Dict[str, Dict[str, str]]) -> Optional[str]:
-    """
-    Robust inverse: handles variants like
-      - "In which country is Paris?"
-      - "Paris is in what country?"
-      - "What country is Paris in"
-    """
-    # Intent: must mention both 'country' and either 'which' or 'what' (order doesn't matter)
-    t_raw = text
-    t = normalize(text)
-    has_country = "country" in t
-    has_which_or_what = ("which" in t) or ("what" in t)
-    if not (has_country and has_which_or_what):
-        return None
+    # 2b) Inverse capital -> country
+    inverse_cap = country_from_capital_question(text_norm, countries)
+    if inverse_cap:
+        return inverse_cap, {"type": "inverse-capital"}
 
-    # Find any capital mentioned and return its country
-    for cname, info in countries.items():
-        cap = info.get("capital", "")
-        if cap and normalize(cap) in t:
-            return f"{info['capital']} is the capital of {cname}."
-    return None
-
-
-    # 2c) Inverse currency → list of countries
+    # 2c) Inverse currency -> list of countries
     inverse_cur = countries_with_currency_question(text_norm, countries)
     if inverse_cur:
         return inverse_cur, {"type": "inverse-currency"}
@@ -347,4 +332,3 @@ def extract_expression(user_input: str):
 if __name__ == "__main__":
     bot = Talk2MeBot()
     bot.chat()
-#update
