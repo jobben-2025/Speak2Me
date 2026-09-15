@@ -7,6 +7,10 @@ Built at WBS Coding School in September 2025. The brief was one week: a chatbot
 with ten keywords and two extra features. This is where it ended up two weeks
 later.
 
+![Geopatra answering two questions, avatar animating in time with the voice](assets/demo.gif)
+
+*Unedited 15-second screen recording of the running program.*
+
 ## What it does
 
 - **195 countries** with capital, currency and language, answered in either
@@ -61,6 +65,14 @@ export HF_TOKEN=hf_...
 | [@Maximilian-D-Muhr](https://github.com/Maximilian-D-Muhr) | country lookup layer and fuzzy typo matching |
 
 The commit history and all ten pull requests are in this repository.
+
+## A cleaned-up version
+
+[**R-u-d/geopatra**](https://github.com/R-u-d/geopatra) is the final state of
+this project, tidied up and tested — the hardcoded API token removed, the
+response logic separated from the GUI, 84 tests added. It is a clean import,
+not a rewritten history: the record of how the project was actually built,
+including every pull request, stays here.
 
 ## Notes
 
