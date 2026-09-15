@@ -19,6 +19,7 @@ import time
 from itertools import cycle, chain
 import cv2
 import json
+import os
 from types import SimpleNamespace as Sns
 import requests
 from collections import deque
@@ -113,8 +114,11 @@ def hf_chat(model:str, question:str):
         ...
 
     API_URL = "https://router.huggingface.co/v1/chat/completions"
+    hf_token = os.environ.get("HF_TOKEN")
+    if not hf_token:
+        return "No language model is configured. Set HF_TOKEN in the environment."
     headers = {
-        "Authorization": f"Bearer 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",
+        "Authorization": f"Bearer {hf_token}",
     }
 
     def query(payload):
