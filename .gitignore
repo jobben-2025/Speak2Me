@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.DS_Store
+.env
+
+# Installed packages belong in a virtualenv, not in the repository.
+PIL/
+pillow-*.dist-info/
